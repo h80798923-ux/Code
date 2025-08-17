@@ -38,6 +38,7 @@
       border-radius: 14px;
       word-wrap: break-word;
       animation: fadeIn 0.3s ease;
+      position: relative;
     }
     .me {
       align-self: flex-end;
@@ -98,6 +99,29 @@
       background: #3a3a55;
       font-size: 14px;
     }
+    .deleteMenu {
+      position: absolute;
+      bottom: -35px;
+      right: 0;
+      background: #222;
+      border-radius: 8px;
+      padding: 5px;
+      font-size: 13px;
+      display: none;
+      flex-direction: column;
+      z-index: 10;
+    }
+    .deleteMenu button {
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin: 2px 0;
+      width: 120px;
+      background: #444;
+      font-size: 12px;
+    }
+    .deleteMenu button:hover {
+      background: #666;
+    }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -125,7 +149,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
+    import { getDatabase, ref, push, onChildAdded, remove } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDmPJMg435D2pYyepskLeX9y8BP7ECBFVU",
@@ -158,14 +182,40 @@
     // Mesajları getir
     onChildAdded(messagesRef, (data) => {
       const msg = data.val();
+      const key = data.key;
+
       const div = document.createElement("div");
       div.classList.add("message");
       div.classList.add(msg.user === username ? "me" : "other");
+      div.setAttribute("data-key", key);
       div.innerHTML = `<div class="username">${msg.user}</div>${msg.text}`;
-      div.onclick = () => {
-        document.getElementById("replyBox").style.display="block";
-        document.getElementById("replyBox").innerText="Yanıtlanıyor: "+msg.text;
+
+      // Silme menüsü
+      const menu = document.createElement("div");
+      menu.classList.add("deleteMenu");
+
+      const btn1 = document.createElement("button");
+      btn1.innerText = "Kendim için sil";
+      btn1.onclick = () => {
+        div.remove(); // sadece kendinde silinir
       };
+
+      const btn2 = document.createElement("button");
+      btn2.innerText = "Herkes için sil";
+      btn2.onclick = () => {
+        remove(ref(db, "messages/" + key));
+        div.remove();
+      };
+
+      menu.appendChild(btn1);
+      if(msg.user === username) menu.appendChild(btn2); // sadece kendi mesajını tamamen silebilirsin
+
+      div.appendChild(menu);
+
+      div.onclick = () => {
+        menu.style.display = (menu.style.display === "flex") ? "none" : "flex";
+      };
+
       document.getElementById("messages").appendChild(div);
       document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
     });
