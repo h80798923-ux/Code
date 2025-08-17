@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>OnurChatting</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      background: linear-gradient(45deg, #1e1e2e, #3a3a55);
+      padding: 12px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    }
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .message {
+      max-width: 70%;
+      padding: 10px;
+      border-radius: 14px;
+      word-wrap: break-word;
+      animation: fadeIn 0.3s ease;
+    }
+    .me {
+      align-self: flex-end;
+      background: #0d7377;
+    }
+    .other {
+      align-self: flex-start;
+      background: #3a3a55;
+    }
+    .username {
+      font-size: 12px;
+      opacity: 0.7;
+      margin-bottom: 3px;
+    }
+    #replyBox {
+      display: none;
+      background: #222;
+      padding: 6px;
+      font-size: 13px;
+      border-left: 4px solid #0d7377;
+      margin: 4px;
+      border-radius: 6px;
+    }
+    #inputArea {
+      display: flex;
+      gap: 6px;
+      padding: 10px;
+      background: #1e1e2e;
+      align-items: center;
+    }
+    #messageInput {
+      flex: 1;
+      padding: 10px;
+      border-radius: 20px;
+      border: none;
+      outline: none;
+    }
+    button {
+      background: #0d7377;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    button:hover { background: #14a098; }
+    #statusArea {
+      display: none;
+      background: #222;
+      padding: 10px;
+      height: 30%;
+      overflow-y: auto;
+    }
+    .status {
+      padding: 8px;
+      margin: 5px 0;
+      border-radius: 10px;
+      background: #3a3a55;
+      font-size: 14px;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <header>🌙 OnurChatting</header>
+
+  <div id="messages"></div>
+
+  <div id="replyBox"></div>
+
+  <div id="inputArea">
+    <input type="text" id="messageInput" placeholder="Mesaj yaz..." />
+    <button id="sendBtn">➤</button>
+    <button id="statusBtn">📢</button>
+  </div>
+
+  <div id="statusArea">
+    <input type="text" id="statusInput" placeholder="Durum yaz..." style="width:70%; padding:6px;border-radius:6px;">
+    <button id="addStatusBtn">➕</button>
+    <div id="statusList"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDmPJMg435D2pYyepskLeX9y8BP7ECBFVU",
+      authDomain: "whatsapp-2bbfe.firebaseapp.com",
+      databaseURL: "https://whatsapp-2bbfe-default-rtdb.firebaseio.com/",
+      projectId: "whatsapp-2bbfe",
+      storageBucket: "whatsapp-2bbfe.appspot.com",
+      messagingSenderId: "413471737421",
+      appId: "1:413471737421:web:4e7fbc1715f969327e3e04"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let username = prompt("Kullanıcı adınızı girin:");
+    if(!username) username = "Misafir" + Math.floor(Math.random()*1000);
+
+    const messagesRef = ref(db, "messages");
+    const statusRef = ref(db, "status");
+
+    // Mesaj gönder
+    document.getElementById("sendBtn").onclick = () => {
+      const text = document.getElementById("messageInput").value.trim();
+      if(text){
+        push(messagesRef, { user: username, text: text, time: Date.now() });
+        document.getElementById("messageInput").value = "";
+      }
+    };
+
+    // Mesajları getir
+    onChildAdded(messagesRef, (data) => {
+      const msg = data.val();
+      const div = document.createElement("div");
+      div.classList.add("message");
+      div.classList.add(msg.user === username ? "me" : "other");
+      div.innerHTML = `<div class="username">${msg.user}</div>${msg.text}`;
+      div.onclick = () => {
+        document.getElementById("replyBox").style.display="block";
+        document.getElementById("replyBox").innerText="Yanıtlanıyor: "+msg.text;
+      };
+      document.getElementById("messages").appendChild(div);
+      document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+    });
+
+    // Durum ekle
+    document.getElementById("addStatusBtn").onclick = () => {
+      const text = document.getElementById("statusInput").value.trim();
+      if(text){
+        push(statusRef, { user: username, text: text, time: Date.now() });
+        document.getElementById("statusInput").value = "";
+      }
+    };
+
+    // Durumları getir
+    onChildAdded(statusRef, (data) => {
+      const s = data.val();
+      const div = document.createElement("div");
+      div.classList.add("status");
+      div.innerText = `${s.user}: ${s.text}`;
+      document.getElementById("statusList").appendChild(div);
+    });
+
+    // Durum alanı aç/kapat
+    document.getElementById("statusBtn").onclick = () => {
+      const area = document.getElementById("statusArea");
+      area.style.display = area.style.display === "none" ? "block" : "none";
+    };
+  </script>
+</body>
+</html>
