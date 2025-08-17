@@ -3,246 +3,148 @@
 <head>
   <meta charset="UTF-8">
   <title>OnurChatting</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #121212;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    header {
-      background: linear-gradient(45deg, #1e1e2e, #3a3a55);
-      padding: 12px;
-      text-align: center;
-      font-size: 20px;
-      font-weight: bold;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.6);
-    }
-    #messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .message {
-      max-width: 70%;
-      padding: 10px;
-      border-radius: 14px;
-      word-wrap: break-word;
-      animation: fadeIn 0.3s ease;
-      position: relative;
-    }
-    .me {
-      align-self: flex-end;
-      background: #0d7377;
-    }
-    .other {
-      align-self: flex-start;
-      background: #3a3a55;
-    }
-    .username {
-      font-size: 12px;
-      opacity: 0.7;
-      margin-bottom: 3px;
-    }
-    #replyBox {
-      display: none;
-      background: #222;
-      padding: 6px;
-      font-size: 13px;
-      border-left: 4px solid #0d7377;
-      margin: 4px;
-      border-radius: 6px;
-    }
-    #inputArea {
-      display: flex;
-      gap: 6px;
-      padding: 10px;
-      background: #1e1e2e;
-      align-items: center;
-    }
-    #messageInput {
-      flex: 1;
-      padding: 10px;
-      border-radius: 20px;
-      border: none;
-      outline: none;
-    }
-    button {
-      background: #0d7377;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 50%;
-      cursor: pointer;
-    }
-    button:hover { background: #14a098; }
-    #statusArea {
-      display: none;
-      background: #222;
-      padding: 10px;
-      height: 30%;
-      overflow-y: auto;
-    }
-    .status {
-      padding: 8px;
-      margin: 5px 0;
-      border-radius: 10px;
-      background: #3a3a55;
-      font-size: 14px;
-    }
-    .deleteMenu {
-      position: absolute;
-      bottom: -35px;
-      right: 0;
-      background: #222;
-      border-radius: 8px;
-      padding: 5px;
-      font-size: 13px;
-      display: none;
-      flex-direction: column;
-      z-index: 10;
-    }
-    .deleteMenu button {
-      border-radius: 6px;
-      padding: 6px 8px;
-      margin: 2px 0;
-      width: 120px;
-      background: #444;
-      font-size: 12px;
-    }
-    .deleteMenu button:hover {
-      background: #666;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
-</head>
-<body>
-  <header>🌙 OnurChatting</header>
-
-  <div id="messages"></div>
-
-  <div id="replyBox"></div>
-
-  <div id="inputArea">
-    <input type="text" id="messageInput" placeholder="Mesaj yaz..." />
-    <button id="sendBtn">➤</button>
-    <button id="statusBtn">📢</button>
-  </div>
-
-  <div id="statusArea">
-    <input type="text" id="statusInput" placeholder="Durum yaz..." style="width:70%; padding:6px;border-radius:6px;">
-    <button id="addStatusBtn">➕</button>
-    <div id="statusList"></div>
-  </div>
-
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded, remove } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
+    // Firebase importları
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, remove, set } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
+    // Firebase config (senin verdiğin)
     const firebaseConfig = {
       apiKey: "AIzaSyDmPJMg435D2pYyepskLeX9y8BP7ECBFVU",
       authDomain: "whatsapp-2bbfe.firebaseapp.com",
-      databaseURL: "https://whatsapp-2bbfe-default-rtdb.firebaseio.com/",
       projectId: "whatsapp-2bbfe",
-      storageBucket: "whatsapp-2bbfe.appspot.com",
+      storageBucket: "whatsapp-2bbfe.firebasestorage.app",
       messagingSenderId: "413471737421",
-      appId: "1:413471737421:web:4e7fbc1715f969327e3e04"
+      appId: "1:413471737421:web:4e7fbc1715f969327e3e04",
+      databaseURL: "https://whatsapp-2bbfe-default-rtdb.firebaseio.com/"
     };
 
+    // Başlat
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    let username = prompt("Kullanıcı adınızı girin:");
-    if(!username) username = "Misafir" + Math.floor(Math.random()*1000);
+    // Kullanıcı adı iste
+    let username = "";
+    while(!username){
+      username = prompt("Kullanıcı adınızı girin:");
+    }
 
-    const messagesRef = ref(db, "messages");
-    const statusRef = ref(db, "status");
+    // Mesajlar
+    const messagesRef = ref(db,"messages");
+    const statusRef   = ref(db,"status");
 
     // Mesaj gönder
-    document.getElementById("sendBtn").onclick = () => {
-      const text = document.getElementById("messageInput").value.trim();
+    window.sendMessage = function(){
+      const input = document.getElementById("msgInput");
+      const text = input.value.trim();
       if(text){
-        push(messagesRef, { user: username, text: text, time: Date.now() });
-        document.getElementById("messageInput").value = "";
+        push(messagesRef,{
+          user: username,
+          text: text,
+          time: Date.now()
+        });
+        input.value = "";
       }
-    };
+    }
 
     // Mesajları getir
-    onChildAdded(messagesRef, (data) => {
-      const msg = data.val();
-      const key = data.key;
-
+    onChildAdded(messagesRef,(snap)=>{
+      const msg = snap.val();
+      const key = snap.key;
       const div = document.createElement("div");
-      div.classList.add("message");
-      div.classList.add(msg.user === username ? "me" : "other");
-      div.setAttribute("data-key", key);
-      div.innerHTML = `<div class="username">${msg.user}</div>${msg.text}`;
-
-      // Silme menüsü
-      const menu = document.createElement("div");
-      menu.classList.add("deleteMenu");
-
-      const btn1 = document.createElement("button");
-      btn1.innerText = "Kendim için sil";
-      btn1.onclick = () => {
-        div.remove(); // sadece kendinde silinir
-      };
-
-      const btn2 = document.createElement("button");
-      btn2.innerText = "Herkes için sil";
-      btn2.onclick = () => {
-        remove(ref(db, "messages/" + key));
-        div.remove();
-      };
-
-      menu.appendChild(btn1);
-      if(msg.user === username) menu.appendChild(btn2); // sadece kendi mesajını tamamen silebilirsin
-
-      div.appendChild(menu);
-
-      div.onclick = () => {
-        menu.style.display = (menu.style.display === "flex") ? "none" : "flex";
-      };
-
+      div.className = "message " + (msg.user === username ? "me":"other");
+      div.innerHTML = `
+        <div class="msgHeader">
+          <b>${msg.user}</b> <span>${new Date(msg.time).toLocaleTimeString()}</span>
+        </div>
+        <div class="msgText">${msg.text||""}</div>
+        ${msg.user===username ? 
+          `<div class="msgActions">
+             <button onclick="deleteForMe('${key}',this)">Bende Sil</button>
+             <button onclick="deleteForAll('${key}')">Herkesten Sil</button>
+           </div>`:""}
+      `;
       document.getElementById("messages").appendChild(div);
       document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
     });
 
+    // Bende sil
+    window.deleteForMe = function(key,btn){
+      btn.closest(".message").remove();
+    }
+
+    // Herkesten sil
+    window.deleteForAll = function(key){
+      set(ref(db,"messages/"+key),{deleted:true});
+    }
+
+    // Mesaj silinince işaretle
+    onChildAdded(messagesRef,(snap)=>{
+      const key = snap.key;
+      const msg = snap.val();
+      if(msg.deleted){
+        const msgs = document.getElementById("messages").children;
+        for(let m of msgs){
+          if(m.innerHTML.includes(key)){
+            m.querySelector(".msgText").innerText = "🚫 Bu mesaj silindi";
+            if(m.querySelector(".msgActions")) m.querySelector(".msgActions").remove();
+          }
+        }
+      }
+    });
+
     // Durum ekle
-    document.getElementById("addStatusBtn").onclick = () => {
+    window.addStatus = function(){
       const text = document.getElementById("statusInput").value.trim();
       if(text){
-        push(statusRef, { user: username, text: text, time: Date.now() });
-        document.getElementById("statusInput").value = "";
+        push(statusRef,{user:username,text:text,time:Date.now()});
+        document.getElementById("statusInput").value="";
       }
-    };
+    }
 
     // Durumları getir
-    onChildAdded(statusRef, (data) => {
-      const s = data.val();
+    onChildAdded(statusRef,(snap)=>{
+      const s = snap.val();
       const div = document.createElement("div");
-      div.classList.add("status");
+      div.className="status";
       div.innerText = `${s.user}: ${s.text}`;
       document.getElementById("statusList").appendChild(div);
     });
-
-    // Durum alanı aç/kapat
-    document.getElementById("statusBtn").onclick = () => {
-      const area = document.getElementById("statusArea");
-      area.style.display = area.style.display === "none" ? "block" : "none";
-    };
   </script>
+
+  <style>
+    body{margin:0;font-family:sans-serif;background:#121212;color:white;display:flex;flex-direction:column;height:100vh}
+    header{background:#1f1f1f;padding:10px;text-align:center;font-weight:bold;font-size:18px;color:#0ff}
+    #messages{flex:1;overflow-y:auto;padding:10px}
+    .message{margin:6px;padding:8px;border-radius:8px;max-width:75%;}
+    .me{background:#0d7377;margin-left:auto;}
+    .other{background:#323232;margin-right:auto;}
+    .msgHeader{font-size:12px;color:#ccc;display:flex;justify-content:space-between}
+    .msgText{margin-top:4px}
+    .msgActions{margin-top:5px}
+    .msgActions button{background:#ff5555;border:none;color:white;padding:3px 6px;border-radius:4px;margin-right:4px;cursor:pointer}
+    footer{display:flex;padding:10px;background:#1f1f1f}
+    footer input{flex:1;padding:8px;border-radius:6px;border:none}
+    footer button{margin-left:8px;background:#0ff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer}
+    #statusArea{background:#222;padding:10px;max-height:150px;overflow:auto}
+    .status{margin:4px 0;padding:4px;background:#333;border-radius:4px}
+    #statusInput{width:80%;padding:6px;border:none;border-radius:6px}
+    #statusBtn{background:#0ff;color:black;padding:6px;border:none;border-radius:6px;cursor:pointer;margin-left:6px}
+  </style>
+</head>
+<body>
+  <header>💬 OnurChatting</header>
+  <div id="messages"></div>
+  <footer>
+    <input id="msgInput" placeholder="Mesaj yaz...">
+    <button onclick="sendMessage()">Gönder</button>
+  </footer>
+
+  <div id="statusArea">
+    <h3>Durumlar</h3>
+    <div id="statusList"></div>
+    <input id="statusInput" placeholder="Durum yaz...">
+    <button id="statusBtn" onclick="addStatus()">Ekle</button>
+  </div>
 </body>
 </html>
